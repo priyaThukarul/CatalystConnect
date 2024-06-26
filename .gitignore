@@ -1,0 +1,22 @@
+# Ignore environment files
+.env
+
+# Python related files
+*.pyc
+__pycache__/
+.pytest_cache/
+
+# Database
+db.sqlite3
+
+# Static and Media files
+/staticfiles/
+/media/
+
+# Logs
+/logs/
+*.log
+
+# Dependencies and virtual environments
+/env/
+
