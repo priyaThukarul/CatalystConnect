@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h2>Upload File</h2>
+  <form id="chunked-upload-form" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="file" name="file" id="file">
+      <progress id="upload-progress" max="100" value="0"></progress>
+      <button type="button" onclick="startUpload()">Upload</button>
+  </form>
+  <div id="progress-text"></div>
+
+  <script>
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function startUpload() {
+        var fileInput = document.getElementById('file');
+        var file = fileInput.files[0];
+        if (!file) {
+            alert('Please select a file to upload.');
+            return;
+        }
+
+        var csrftoken = getCookie('csrftoken');
+        var upload_id = 'upload_' + Date.now();
+        var chunkSize = 1024 * 1024;
+        var totalChunks = Math.ceil(file.size / chunkSize);
+        var start = 0;
+        var chunkNumber = 0;
+
+        function uploadChunk(start, end, chunkNumber) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', "{% url 'api_chunked_upload' %}", true);
+            xhr.setRequestHeader('X-CSRFToken', csrftoken);
+
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    var percentComplete = (chunkNumber / totalChunks) * 100 + (event.loaded / event.total) * (100 / totalChunks);
+                    document.getElementById('upload-progress').value = percentComplete;
+                    document.getElementById('progress-text').innerText = 'Uploading... ' + percentComplete.toFixed(2) + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    if (end < file.size) {
+                        start = end;
+                        end = Math.min(start + chunkSize, file.size);
+                        chunkNumber += 1;
+                        uploadChunk(start, end, chunkNumber);
+                    } else {
+                        document.getElementById('progress-text').innerText = 'Upload complete!';
+                    }
+                } else {
+                    document.getElementById('progress-text').innerText = 'Upload failed: ' + xhr.statusText;
+                }
+            };
+
+            xhr.onerror = function() {
+                document.getElementById('progress-text').innerText = 'Upload failed: Server Error';
+            };
+
+            var formData = new FormData();
+            var chunk = file.slice(start, end);
+            formData.append('file', chunk);
+            formData.append('upload_id', upload_id);
+            formData.append('chunk_number', chunkNumber);
+            formData.append('total_chunks', totalChunks);
+
+            xhr.send(formData);
+        }
+
+        var end = Math.min(chunkSize, file.size);
+        uploadChunk(start, end, chunkNumber);
+    }
+  </script>
+{% endblock %}

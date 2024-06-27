@@ -1,0 +1,115 @@
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Query Builder</h1>
+    <form id="queryForm" method="GET" action="">
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label for="id_keyword">Keyword</label>
+                <input type="text" class="form-control" id="id_keyword" name="keyword">
+            </div>
+            <div class="form-group col-md-4">
+                <label for="id_city">City</label>
+                <select class="form-control" id="id_city" name="city">
+                    <option value="">---------</option>
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="id_employees_from">Employees From</label>
+                <input type="number" class="form-control" id="id_employees_from" name="employees_from">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label for="id_employees_to">Employees To</label>
+                <input type="number" class="form-control" id="id_employees_to" name="employees_to">
+            </div>
+            <div class="form-group col-md-4">
+                <label for="id_industry">Industry</label>
+                <input type="text" class="form-control" id="id_industry" name="industry">
+            </div>
+            <div class="form-group col-md-4">
+                <label for="id_year_founded">Year Founded</label>
+                <input type="number" class="form-control" id="id_year_founded" name="year_founded">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label for="id_state">State</label>
+                <select class="form-control" id="id_state" name="state">
+                    <option value="">---------</option>
+                    {% for state in states %}
+                    <option value="{{ state }}">{{ state }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="id_country">Country</label>
+                <select class="form-control" id="id_country" name="country">
+                    <option value="">---------</option>
+                    {% for country in countries %}
+                    <option value="{{ country }}">{{ country }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+    {% if count is not None %}
+        <div class="mt-4">
+            <h2>Results: {{ count }}</h2>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    $(document).ready(function() {
+        $('#id_country').change(function() {
+            var country = $(this).val();
+            if (country) {
+                $.ajax({
+                    url: "{% url 'dynamic_fields' %}",
+                    data: {
+                        'country': country
+                    },
+                    dataType: 'json',
+                    success: function(data) {
+                        $('#id_state').empty();
+                        $('#id_state').append('<option value="">---------</option>');
+                        $.each(data.states, function(key, value) {
+                            $('#id_state').append('<option value="' + value + '">' + value + '</option>');
+                        });
+                        // Trigger change event on state select to update cities
+                        $('#id_state').change();
+                    }
+                });
+            } else {
+                $('#id_state').empty();
+                $('#id_city').empty();
+            }
+        });
+
+        $('#id_state').change(function() {
+            var state = $(this).val();
+            if (state) {
+                $.ajax({
+                    url: "{% url 'dynamic_fields' %}",
+                    data: {
+                        'state': state
+                    },
+                    dataType: 'json',
+                    success: function(data) {
+                        $('#id_city').empty();
+                        $('#id_city').append('<option value="">---------</option>');
+                        $.each(data.cities, function(key, value) {
+                            $('#id_city').append('<option value="' + value + '">' + value + '</option>');
+                        });
+                    }
+                });
+            } else {
+                $('#id_city').empty();
+            }
+        });
+    });
+</script>
+
+{% endblock %}
